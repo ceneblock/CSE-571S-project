@@ -6,6 +6,9 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#include <cstring>
+#include <string>
+
 typedef uint16_t dnsPacket[8];
 
 class dnsLayer
@@ -15,7 +18,7 @@ class dnsLayer
     dnsLayer()
     {
       header = 0;
-      id = 0;
+      //id = 0;
     }
 
     //foolishly using uint8_t even though team rocket could be blasting off

@@ -11,11 +11,17 @@ int main()
   osLayer os;
   os.init();
 
+  dnsLayer dns;
+
+  dns.setQR(0);
+  dns.setOpCode(0);
+  dns.setAA(0); //doesn't matter
+  dns.setTC(0);
+  dns.setRD(0);
+  //dns.setRA(0);
+  dns.setrCode(0);
+
   os.send();
 
-
-  //char str[80];
-  //inet_ntop(AF_INET, &(_res.nsaddr_list[0].sin_addr), str, INET_ADDRSTRLEN);
-  //cout << str << endl;
   return EXIT_SUCCESS;
 }
