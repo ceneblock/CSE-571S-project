@@ -3,7 +3,7 @@
 #include <arpa/inet.h>
 
 #include <osLayer.h>
-#include <udpLayer.h>
+#include <dnsLayer.h>
 
 using namespace std;
 int main()
@@ -20,6 +20,9 @@ int main()
   dns.setRD(0);
   //dns.setRA(0);
   dns.setrCode(0);
+
+  dns.setDomain("www.google.com");
+  dns.parseDomain();
 
   os.send();
 

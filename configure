@@ -17966,8 +17966,8 @@ printf "%s\n" "no" >&6; }
 fi
 
 pkg_failed=no
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gtest_main" >&5
-printf %s "checking for gtest_main... " >&6; }
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for GTEST" >&5
+printf %s "checking for GTEST... " >&6; }
 
 if test -n "$GTEST_CFLAGS"; then
     pkg_cv_GTEST_CFLAGS="$GTEST_CFLAGS"
@@ -18007,7 +18007,7 @@ fi
 
 
 if test $pkg_failed = yes; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+   	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 
 if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
@@ -18016,14 +18016,14 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-                GTEST_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "gtest_main" 2>&1`
+	        GTEST_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "gtest_main" 2>&1`
         else
-                GTEST_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "gtest_main" 2>&1`
+	        GTEST_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "gtest_main" 2>&1`
         fi
-        # Put the nasty error message in config.log where it belongs
-        echo "$GTEST_PKG_ERRORS" >&5
+	# Put the nasty error message in config.log where it belongs
+	echo "$GTEST_PKG_ERRORS" >&5
 
-        as_fn_error $? "Package requirements (gtest_main) were not met:
+	as_fn_error $? "Package requirements (gtest_main) were not met:
 
 $GTEST_PKG_ERRORS
 
@@ -18034,9 +18034,9 @@ Alternatively, you may set the environment variables GTEST_CFLAGS
 and GTEST_LIBS to avoid the need to call pkg-config.
 See the pkg-config man page for more details." "$LINENO" 5
 elif test $pkg_failed = untried; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+     	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-        { { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+	{ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 printf "%s\n" "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
 is in your PATH or set the PKG_CONFIG environment variable to the full
@@ -18049,8 +18049,8 @@ See the pkg-config man page for more details.
 To get pkg-config, see <http://pkg-config.freedesktop.org/>.
 See \`config.log' for more details" "$LINENO" 5; }
 else
-        GTEST_CFLAGS=$pkg_cv_GTEST_CFLAGS
-        GTEST_LIBS=$pkg_cv_GTEST_LIBS
+	GTEST_CFLAGS=$pkg_cv_GTEST_CFLAGS
+	GTEST_LIBS=$pkg_cv_GTEST_LIBS
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 

@@ -1,5 +1,8 @@
 #ifndef OSLAYER_H
 #define OSLAYER_H
+
+#include <dnsLayer.h>
+
 #include <netinet/in.h>
 #include <arpa/nameser.h>
 #include <arpa/inet.h>
@@ -56,33 +59,47 @@ class osLayer
       { 
         std::cerr << strerror(errno) << std::endl;
         rv = -1;
+        return rv;
       }
-      
+     
       socketfd.push_back(fd);
 
-      uint16_t message[14];
-      message[0]  = 0x0000; //transaction ID;
-      message[1]  = 0x0100; //flags recursion desired
-      message[2]  = 0x0100; //one question
-      message[3]  = 0x0000; //answer rrs
-      message[4]  = 0x0000; //authority rrs
-      message[5]  = 0x0000; //additional rrs
-      message[6]  = 0x6706; //6 characters (google) first one g is 67
-      message[7]  = 0x6f6f; //oo
-      message[8]  = 0x6c67; //gl
-      message[9]  = 0x0365; //e 3 characters;
-      message[10] = 0x6f63; //co
-      message[11] = 0x006d; //m 0 characters
-      message[12] = 0x0100; //A record
-      message[13] = 0x0100; //IN
+      std::vector<uint8_t> message;
+      //TODO: migrate over to udp class
+      message.push_back(0xAA); message.push_back(0x55); //transaction ID;
+      message.push_back(0x01); message.push_back(0x00); //flags recursion desired
+      message.push_back(0x00); message.push_back(0x01); //one question
+      message.push_back(0x00); message.push_back(0x00); //answer rrs
+      message.push_back(0x00); message.push_back(0x00); //authority rrs
+      message.push_back(0x00); message.push_back(0x00); //additional rrs
+      
+      dns.setDomain("google.com");
+      dns.parseDomain();
+      
+      for(uint8_t c : dns.formatDomain())
+      {
+        message.push_back(c);
+      }
 
-      sendto(fd, message, sizeof(message), 0, (struct sockaddr *) &sa, sizeof (sa));
+      //TODO: enum
+      message.push_back(0x00); message.push_back(0x01); //A reccord
+      message.push_back(0x00); message.push_back(0x01); //IN
 
-      char buff[80];
+      rv = sendto(fd, message.data(), sizeof(uint8_t) * message.size(), 0, (struct sockaddr *) &sa, sizeof (sa));
+
+      if(rv < 0)
+      {
+        return rv;
+      }
+
+      //Move to read function
+      uint8_t buff[80];
       unsigned int slen = sizeof(sa);
-      recvfrom(fd, buff, 80, 0, (struct sockaddr *)&sa, &slen);
+      rv = recvfrom(fd, buff, 80, 0, (struct sockaddr *)&sa, &slen);
 
-      std::cout << buff << std::endl;
+      //TODO: Parse the results
+      std::cout << buff << std::endl;  
+      dns.parseMessage(buff, rv);
       return rv;
     }
 
@@ -94,7 +111,9 @@ class osLayer
   private:
     addrinfo hints, *servinfo;
     sockaddr_in sa;
-    std::vector<int> socketfd;    
+    std::vector<int> socketfd;
+
+    dnsLayer dns;
 };
 
 #endif
