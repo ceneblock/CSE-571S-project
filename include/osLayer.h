@@ -17,6 +17,7 @@
 
 static int DNS_PORT=53;
 
+
 class osLayer
 {
   public:
@@ -93,12 +94,16 @@ class osLayer
       }
 
       //Move to read function
-      uint8_t buff[80];
+      unsigned int bufferSize = 0;
+      socklen_t optlen = sizeof(bufferSize);
       unsigned int slen = sizeof(sa);
-      rv = recvfrom(fd, buff, 80, 0, (struct sockaddr *)&sa, &slen);
+      while(bufferSize == 0)
+      {
+        getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &bufferSize, &optlen);
+      }
+      uint8_t buff[bufferSize];
+      rv = recvfrom(fd, buff, bufferSize, 0, (struct sockaddr *)&sa, &slen);
 
-      //TODO: Parse the results
-      std::cout << buff << std::endl;  
       dns.parseMessage(buff, rv);
       return rv;
     }

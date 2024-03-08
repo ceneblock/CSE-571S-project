@@ -52,6 +52,7 @@ AC_CHECK_HEADERS([netinet/in.h])
 AC_CHECK_HEADERS([arpa/nameser.h])
 AC_CHECK_HEADERS([resolv.h])
 
+AC_CHECK_HEADERS([sqlite.h])
 #Should be in POSIX fstat(3p)
 AC_CHECK_HEADERS([sys/stat.h])
 
@@ -190,7 +191,7 @@ PKG_CHECK_MODULES([GTEST], [gtest_main])
 #      ])
 #fi
 
-
+AC_SEARCH_LIBS([sqlite3_open], [sqlite3])
 #AX_CXX_CHECK_LIB(SenseHat, [SenseHat],
 #               [have_SenseHat=yes], [have_SenseHat=no])
 #

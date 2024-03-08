@@ -4,7 +4,7 @@
 
 #include <osLayer.h>
 #include <dnsLayer.h>
-
+#include <sqliteLayer.h>
 using namespace std;
 int main()
 {
@@ -25,6 +25,9 @@ int main()
   dns.parseDomain();
 
   os.send();
+
+  sqlite sql;
+  sql.init();
 
   return EXIT_SUCCESS;
 }

@@ -12,6 +12,58 @@
 
 typedef uint16_t dnsPacket[6];
 
+//shameless stolen from Wikipedia:
+//https://en.wikipedia.org/wiki/List_of_DNS_record_types
+enum RECORD_TYPES : uint16_t
+{
+  A          = 1,
+  AAAA       = 28,
+  AFSDB      = 18,
+  APL        = 42,
+  CAA        = 257,
+  CDNSKEY    = 60,
+  CDS        = 59,
+  CERT       = 37,
+  CNAME      = 5,
+  CSYNC      = 62,
+  DHCID      = 49,
+  DLV        = 32769,
+  DNAME      = 39,
+  DNSKEY     = 48,
+  DS         = 43,
+  EUI48      = 108,
+  EUI64      = 109,
+  HINFO      = 13,
+  HIP        = 55,
+  HTTPS      = 65,
+  IPSECKEY   = 45,
+  KEY        = 25,
+  KX         = 36,
+  LOC        = 29,
+  MX         = 15,
+  NAPTR      = 35,
+  NS         = 2,
+  NSEC       = 47,
+  NSEC3      = 50,
+  NSEC3PARAM = 51,
+  OPENPGPKEY = 61,
+  PTR        = 12,
+  RP         = 17,
+  RRSIG      = 46,
+  SIG        = 24,
+  SMIMEA     = 53,
+  SOA        = 6,
+  SRV        = 33,
+  SSHFP      = 44,
+  SVCB       = 64,
+  TA         = 32768,
+  TKEY       = 52,
+  TSIG       = 250,
+  TXT        = 16,
+  URI        = 256,
+  ZONEMD     = 63
+};
+
 class dnsLayer
 {
   public:
@@ -134,10 +186,62 @@ class dnsLayer
 
     void parseMessage(uint8_t *message, unsigned int length)
     {
-      id = (message[0] << 8) + message[1];
-      header = (message[2] << 8) + message[3];
-      questionCount = (message[4] << 8) + message[5];
-      answerCount = (message[6] << 8) + message[7];
+      if(length < 12)
+      {
+        return;
+      }
+      unsigned int offset = 0;
+      id = (message[offset] << 8) + message[++offset];
+      header = (message[++offset] << 8) + message[++offset];
+      questionCount = (message[++offset] << 8) + message[++offset];
+      answerCount = (message[++offset] << 8) + message[++offset];
+      authorityCount = (message[++offset] << 8) + message[++offset];
+      additionalCount = (message[++offset] << 8) + message[++offset];
+
+   
+      unsigned int x = ++offset;
+      uint8_t count = message[x];
+      while(count != 0)
+      { 
+        offset+=count+1;
+        count = message[offset];
+        //don't replace it on the last instance
+        if(message[offset] != 0)
+        {
+          message[offset] = '.';
+        }
+      }
+      
+      domain = (char *)&message[x];
+
+      std::cout << "domain: " << domain << std::endl;
+
+      qType = (message[++offset] << 8) + message[++offset];
+      qClass= (message[++offset] << 8) + message[++offset];
+
+      //At this point, message should point to the start of the response
+      a.name   = (message[++offset] << 8) + message[++offset];
+      a.aType  = (message[++offset] << 8) + message[++offset];
+      a.aClass = (message[++offset] << 8) + message[++offset];
+      a.aTTL   = (message[++offset] << 24) + (message[++offset] << 16) + (message[++offset] << 8) + message[++offset];
+      a.aLength = (message[++offset] << 8) + message[++offset];
+
+      for(uint16_t x = a.aLength; x > 0; --x)
+      {
+        a.aAddress[a.aLength - x] = message[++offset];
+      }
+
+      //IPv4
+      if(a.aLength == 4)
+      {
+        for(x = 0; x < a.aLength - 1; ++x)
+        {
+          a.address += std::to_string(a.aAddress[x]) + ".";
+        }
+        a.address += std::to_string(a.aAddress[a.aLength - 1]);
+      }
+      //TODO: IPv6 (I'm never going to do it because of compression)
+      std::cout << "Address: " << a.address << std::endl;
 
     }
   private:
@@ -150,6 +254,19 @@ class dnsLayer
     uint16_t qType;
     uint16_t qClass;
 
+    struct answer
+    {
+      uint16_t name;     //will always be c00c c0 represents the start and c0 is the
+                         //the offset in the header
+      uint16_t aType;    //likely will be 0x0001, but reality is it'll be qType
+      uint16_t aClass;   //Similar to the above
+      uint32_t aTTL;     //cache for how long
+      uint16_t aLength;  //how long is the address
+      uint8_t  aAddress[16]; //the actual address
+      std::string address; //human readable version
+    };
+
+    answer a;
     dnsPacket datagram;
 
     std::string domain;
