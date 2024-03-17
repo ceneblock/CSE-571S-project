@@ -70,42 +70,42 @@ class dnsLayer
 
     dnsLayer()
     {
-      header = 0;
-      //id = 0;
+      q.qHeader = 0;
+      //q.qId = 0;
     }
 
     //foolishly using uint8_t even though team rocket could be blasting off
     //again (overflow)
     void setQR(uint8_t value)
     {
-      header = (value << 15) || header;
+      q.qHeader = (value << 15) || q.qHeader;
     }
 
     void setOpCode(uint8_t value)
     {
-      header = (value << 11) || header;
+      q.qHeader = (value << 11) || q.qHeader;
     }
 
     void setAA(uint8_t value)
     {
-      header =  (value << 10) || header;
+      q.qHeader =  (value << 10) || q.qHeader;
     }
 
     void setTC(uint8_t value)
     {
-      header = (value << 9) || header;
+      q.qHeader = (value << 9) || q.qHeader;
     }
 
     void setRD(uint8_t value)
     {
-      header = (value << 8)  || header;
+      q.qHeader = (value << 8)  || q.qHeader;
     }
 
     //setZero isn't needed as it's reserved bits
 
     void setrCode(uint8_t value)
     {
-      header = (value << 0) || header; //could just be header |= value, but
+      q.qHeader = (value << 0) || q.qHeader; //could just be header |= value, but
                                        //doing this for consistency
     }
 
@@ -115,19 +115,19 @@ class dnsLayer
 
     void setqClass() //This is always going to be 1.
     {
-      qClass = 1;
+      q.qClass = 1;
     }
 
     dnsPacket *getPacket()
     {
-      datagram[0] = header;
-      datagram[1] = id;
-      datagram[2] = questionCount;
-      datagram[3] = answerCount;
-      datagram[4] = authorityCount;
-      datagram[5] = additionalCount;
+      datagram[0] = q.qHeader;
+      datagram[1] = q.qId;
+      datagram[2] = q.qQuestionCount;
+      datagram[3] = q.qAnswerCount;
+      datagram[4] = q.qAuthorityCount;
+      datagram[5] = q.qAdditionalCount;
       //datagram[6] = qType;
-      //datagram[7] = qClass;
+      //datagram[7] = q.qClass;
       return &datagram;
     }
 
@@ -156,6 +156,7 @@ class dnsLayer
           byteDomain += c;
         }
       }
+      byteDomain.push_back(0x00);
     }
 
     std::string formatDomain(std::string inDomain = "", bool addNull = true)
@@ -166,10 +167,12 @@ class dnsLayer
         byteDomain = inDomain;
       }
 
+      /*
       for(int x = 2; x < byteDomain.length() / 2; x+=2)
       {
         std::swap(byteDomain[x], byteDomain[x + 1]);
       }
+      */
 
       if(addNull)
       {
@@ -184,19 +187,20 @@ class dnsLayer
       return byteDomain;
     }
 
-    void parseMessage(uint8_t *message, unsigned int length)
+    void parseQuery(uint8_t *message, unsigned int length)
     {
       if(length < 12)
       {
         return;
       }
+
       unsigned int offset = 0;
-      id = (message[offset] << 8) + message[++offset];
-      header = (message[++offset] << 8) + message[++offset];
-      questionCount = (message[++offset] << 8) + message[++offset];
-      answerCount = (message[++offset] << 8) + message[++offset];
-      authorityCount = (message[++offset] << 8) + message[++offset];
-      additionalCount = (message[++offset] << 8) + message[++offset];
+      q.qId = (message[offset] << 8) + message[++offset];
+      q.qHeader = (message[++offset] << 8) + message[++offset];
+      q.qQuestionCount = (message[++offset] << 8) + message[++offset];
+      q.qAnswerCount = (message[++offset] << 8) + message[++offset];
+      q.qAuthorityCount = (message[++offset] << 8) + message[++offset];
+      q.qAdditionalCount = (message[++offset] << 8) + message[++offset];
 
    
       unsigned int x = ++offset;
@@ -212,15 +216,160 @@ class dnsLayer
         }
       }
       
-      domain = (char *)&message[x];
+      domain = (char *)&message[x+1];
 
+#ifdef DEBUG
       std::cout << "domain: " << domain << std::endl;
+#endif
 
-      qType = (message[++offset] << 8) + message[++offset];
-      qClass= (message[++offset] << 8) + message[++offset];
+      q.qType = (message[++offset] << 8) + message[++offset];
+      q.qClass= (message[++offset] << 8) + message[++offset];
+
+    }
+
+    //Theoretically, I should use the original message, but I'm not going to
+    void formAnswer(uint8_t *message, unsigned int length)
+    {
+      a.aName   = (0xc0 << 8) + 0x0c; //manually set it
+      a.aType  = q.qType;
+      a.aClass = q.qClass;
+      a.aTTL   = 0x7FFFFFFF; //Max time
+      a.aLength = 0x4; //Set it to IPv4
+      //lol
+      a.aAddress[0] = 127;
+      a.aAddress[1] = 0;
+      a.aAddress[2] = 0;
+      a.aAddress[3] = 1;
+
+      //IPv4
+      if(a.aLength == 4)
+      {
+        for(uint16_t x = 0; x < a.aLength - 1; ++x)
+        {
+          a.address += std::to_string(a.aAddress[x]) + ".";
+        }
+        a.address += std::to_string(a.aAddress[a.aLength - 1]);
+      }
+      //TODO: IPv6 (I'm never going to do it because of compression)
+#ifdef DEBUG
+      std::cout << "Address: " << a.address << std::endl;
+#endif
+    }
+
+    std::vector<uint8_t> returnQueryByteArray()
+    {
+      std::vector<uint8_t> message;
+      message.push_back(q.qId >> 8);
+      message.push_back(q.qId & 0xFF);
+
+      message.push_back(0x81);
+      message.push_back(0x00);
+      //message.push_back(q.qHeader >> 8);
+      //message.push_back(q.qHeader & 0xFF);
+
+      message.push_back(q.qQuestionCount >> 8);
+      message.push_back(q.qQuestionCount & 0xFF);
+
+      message.push_back((q.qAnswerCount + 1) >> 8);
+      message.push_back((q.qAnswerCount + 1) & 0xFF);
+
+      message.push_back(q.qAuthorityCount >> 8);
+      message.push_back(q.qAuthorityCount & 0xFF);
+
+      message.push_back(0x00);
+      message.push_back(0x00);
+      //message.push_back(q.qAdditionalCount >> 8);
+      //message.push_back(q.qAdditionalCount & 0xFF);
+
+      parseDomain();
+
+      for(char c : byteDomain)
+      {
+        message.push_back(c);
+      }
+
+      message.push_back(q.qType >> 8);
+      message.push_back(q.qType & 0xFF);
+
+      message.push_back(q.qClass >> 8);
+      message.push_back(q.qClass & 0xFF);
+
+      return message;
+    }
+
+    std::vector<uint8_t> returnAnswerByteArray()
+    {
+      std::vector<uint8_t> message;
+      
+      uint16_t aLength;  //how long is the address
+      uint8_t  aAddress[16]; //the actual address
+      std::string address; //human readable version
+
+      message.push_back(a.aName >> 8);
+      message.push_back(a.aName & 0xFF);
+
+      message.push_back(a.aType >> 8);
+      message.push_back(a.aType & 0xFF);
+
+      message.push_back(a.aClass >> 8);
+      message.push_back(a.aClass & 0xFF);
+
+      message.push_back(a.aTTL >> 24);
+      message.push_back(a.aTTL >> 16);
+      message.push_back(a.aTTL >> 8);
+      message.push_back(a.aTTL & 0xFF);
+
+      message.push_back(a.aLength >> 8);
+      message.push_back(a.aLength & 0xFF);
+
+      for(uint16_t x = 0; x < a.aLength; ++x)
+      {
+        message.push_back(a.aAddress[x]);
+      }
+
+      return message;
+    }
+
+
+    void parseAnswer(uint8_t *message, unsigned int length)
+    {
+      if(length < 12)
+      {
+        return;
+      }
+      unsigned int offset = 0;
+      q.qId = (message[offset] << 8) + message[++offset];
+      q.qHeader = (message[++offset] << 8) + message[++offset];
+      q.qQuestionCount = (message[++offset] << 8) + message[++offset];
+      q.qAnswerCount = (message[++offset] << 8) + message[++offset];
+      q.qAuthorityCount = (message[++offset] << 8) + message[++offset];
+      q.qAdditionalCount = (message[++offset] << 8) + message[++offset];
+
+   
+      unsigned int x = ++offset;
+      uint8_t count = message[x];
+      while(count != 0)
+      { 
+        offset+=count+1;
+        count = message[offset];
+        //don't replace it on the last instance
+        if(message[offset] != 0)
+        {
+          message[offset] = '.';
+        }
+      }
+      
+      domain = (char *)&message[x+1];
+
+#ifdef DEBUG
+      std::cout << "domain: " << domain << std::endl;
+#endif
+
+      q.qType = (message[++offset] << 8) + message[++offset];
+      q.qClass= (message[++offset] << 8) + message[++offset];
 
       //At this point, message should point to the start of the response
-      a.name   = (message[++offset] << 8) + message[++offset];
+      a.aName   = (message[++offset] << 8) + message[++offset];
       a.aType  = (message[++offset] << 8) + message[++offset];
       a.aClass = (message[++offset] << 8) + message[++offset];
       a.aTTL   = (message[++offset] << 24) + (message[++offset] << 16) + (message[++offset] << 8) + message[++offset];
@@ -241,22 +390,27 @@ class dnsLayer
         a.address += std::to_string(a.aAddress[a.aLength - 1]);
       }
       //TODO: IPv6 (I'm never going to do it because of compression)
+#ifdef DEBUG
       std::cout << "Address: " << a.address << std::endl;
-
+#endif
     }
   private:
-    uint16_t id;
-    uint16_t header;
-    uint16_t questionCount;
-    uint16_t answerCount;
-    uint16_t authorityCount;
-    uint16_t additionalCount;
-    uint16_t qType;
-    uint16_t qClass;
+
+    struct query
+    {
+      uint16_t qId;
+      uint16_t qHeader;
+      uint16_t qQuestionCount;
+      uint16_t qAnswerCount;
+      uint16_t qAuthorityCount;
+      uint16_t qAdditionalCount;
+      uint16_t qType;
+      uint16_t qClass;
+    };
 
     struct answer
     {
-      uint16_t name;     //will always be c00c c0 represents the start and c0 is the
+      uint16_t aName;     //will always be c00c c0 represents the start and c0 is the
                          //the offset in the header
       uint16_t aType;    //likely will be 0x0001, but reality is it'll be qType
       uint16_t aClass;   //Similar to the above
@@ -267,6 +421,7 @@ class dnsLayer
     };
 
     answer a;
+    query q;
     dnsPacket datagram;
 
     std::string domain;
