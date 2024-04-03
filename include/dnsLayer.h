@@ -135,6 +135,7 @@ class dnsLayer
 
     void parseDomain()
     {
+      parsedDomain.clear();
       std::string parsed;
 
       char *pch;
@@ -148,6 +149,7 @@ class dnsLayer
       }
 
       //make it one big string
+      byteDomain = "";
       for(auto &string : parsedDomain)
       {
         byteDomain += string.length();
@@ -218,9 +220,9 @@ class dnsLayer
       
       domain = (char *)&message[x+1];
 
-#ifdef DEBUG
+//#ifdef DEBUG
       std::cout << "domain: " << domain << std::endl;
-#endif
+//#endif
 
       q.qType = (message[++offset] << 8) + message[++offset];
       q.qClass= (message[++offset] << 8) + message[++offset];
@@ -394,6 +396,8 @@ class dnsLayer
       std::cout << "Address: " << a.address << std::endl;
 #endif
     }
+
+    std::vector<std::string> getParsedDomain() { return parsedDomain; }
   private:
 
     struct query

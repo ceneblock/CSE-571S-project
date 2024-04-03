@@ -2,6 +2,7 @@
 #define OSLAYER_H
 
 #include <dnsLayer.h>
+#include <sqliteLayer.h>
 
 #include <netinet/in.h>
 #include <arpa/nameser.h>
@@ -14,8 +15,7 @@
 #include <cstring>
 #include <iostream>
 #include <vector>
-
-
+#include <string>
 
 class osLayer
 {
@@ -25,7 +25,8 @@ class osLayer
     {
       setDEBUG(DEBUG);
       DNS_PORT = 53;
-      dnsSet = false;;
+      dnsSet = false;
+      sqlSet = false;
     }
 
     ~osLayer()
@@ -38,7 +39,46 @@ class osLayer
         }
       }
     }
-    
+   
+    void logData(std::string host, std::vector<std::string> parsedDomain, std::vector<std::string> keys)
+    {
+      if(sqlSet)
+      {
+        std::map<std::string, std::string> valuesMap;
+        valuesMap.insert(std::pair<std::string, std::string>("host", host));
+        std::string key; 
+        bool grabNext = false;
+
+        for(auto subdomain : parsedDomain)
+        {
+          if(grabNext)
+          {
+            valuesMap.insert(std::pair<std::string, std::string>(key, subdomain));
+            grabNext = false;
+          }
+          else
+          {
+            for(auto val : keys)
+            {
+              if(val.compare(subdomain) == 0)
+              {
+                key = val;
+                grabNext = true;
+              }
+            }
+          }
+        }
+        sql->insert(valuesMap);
+      }
+
+    }
+
+    void setSqlite(sqlite *sql)
+    {
+      this->sql = sql;
+      sqlSet = true;
+    }
+
     unsigned int getMaxBufferSize(int fd)
     {
         unsigned int bufferSize = 0;
@@ -140,6 +180,7 @@ class osLayer
         std::cout << "Busy Wait\n";
       }
       addr_len = sizeof(their_addr);
+      //TODO: Spin off into a thread
       if ((numbytes = recvfrom(fd, buff, bufferSize, 0,
           (struct sockaddr *)&their_addr, &addr_len)) == -1) 
       {
@@ -165,10 +206,20 @@ class osLayer
       std::vector<uint8_t> formedAnswer = dns.returnAnswerByteArray();
 
       std::vector<uint8_t> message;
+      message.clear();
       message.insert(message.end(),originalQuery.begin(), originalQuery.end());
       message.insert(message.end(),formedAnswer.begin(), formedAnswer.end());
         
       rv = sendto(fd, message.data(), sizeof(uint8_t) * message.size(), MSG_CONFIRM, (struct sockaddr *) &their_addr, sizeof (their_addr));
+
+      struct sockaddr_in* clientSockAdder = (struct sockaddr_in*)&their_addr;
+      struct in_addr clientAddr = clientSockAdder->sin_addr;
+      char host[INET_ADDRSTRLEN];
+      inet_ntop( AF_INET, &clientAddr, host, INET_ADDRSTRLEN );
+
+      logData(std::string(host), dns.getParsedDomain(), keys);
+
+      close(fd);
 
       return rv;
     }
@@ -256,9 +307,13 @@ class osLayer
     sockaddr_in sa;
     std::vector<int> socketfd;
 
+    const std::vector<std::string> keys = { "host", "user", "password" }; 
+
     dnsLayer dns;
+    sqlite *sql;
 
     bool dnsSet;
+    bool sqlSet;
 };
 
 #endif

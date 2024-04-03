@@ -79,12 +79,14 @@ int main(int argc, char* argv[])
   }
   else
   {
+    sqlite sql;
+    sql.init();
+    
+    os.setSqlite(&sql);
     while(true)
     {
       os.listenForDNSRequest();
     }
-    sqlite sql;
-    sql.init();
   }
   return EXIT_SUCCESS;
 }

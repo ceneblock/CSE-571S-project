@@ -23,7 +23,7 @@ class sqlite
       std::string query =
 "CREATE TABLE IF NOT EXISTS " + table +"("
 "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
-"  host TEXT, user TEXT NOT NULL, password TEXT"
+"  host TEXT NOT NULL, user TEXT NOT NULL, password TEXT NOT NULL"
 ");";
       sqlite3_exec(db, query.c_str(), NULL, 0, NULL);
     }
@@ -43,7 +43,7 @@ class sqlite
       query += ") values(";
       for(auto const &x : valuesMap)
       {
-        query += x.second + ",";
+        query += "\"" + x.second + "\",";
       }
       query.pop_back(); //get rid of extra ,
       query += ");";
