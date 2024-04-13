@@ -1,8 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ([2.69])
-AC_INIT([CSE-571S], [0.0.1], [ceneblock@wustl.edu])
+AC_PREREQ([2.72])
+AC_INIT([CSE-571S],[0.0.1],[ceneblock@wustl.edu])
 AC_CONFIG_SRCDIR([src/main.cpp])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_HEADERS([config.h])
@@ -10,6 +10,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_TESTDIR([tests])
 AC_CONFIG_FILES([ Makefile
                   src/Makefile
+		  preload/Makefile
                 ])
 #AC_CONFIG_FILES([
 #                 Makefile 
@@ -40,126 +41,64 @@ LT_LANG([C++])
 AC_LANG([C++])
 AC_CONFIG_MACRO_DIRS([m4])
 
+AC_ENABLE_SHARED
+AC_DISABLE_STATIC
+#LT_INIT([libtool])
+
 # Checks for libraries.
-AX_CXX_COMPILE_STDCXX_17([ext],[mandatory])
+#AX_CXX_COMPILE_STDCXX_17([ext],[mandatory])
 
 # Checks for header files.
 AC_CHECK_HEADERS([unistd.h])
 AC_CHECK_HEADERS([vector])
-AC_CHECK_HEADERS([tuple])
-AC_CHECK_HEADERS([csignal])
 AC_CHECK_HEADERS([netinet/in.h])
 AC_CHECK_HEADERS([arpa/nameser.h])
 AC_CHECK_HEADERS([resolv.h])
 
-AC_CHECK_HEADERS([sqlite.h])
 #Should be in POSIX fstat(3p)
 AC_CHECK_HEADERS([sys/stat.h])
 
-#This is actually a prereq to SenseHat so if you have SenseHat, then you should
-#have this..
-#AC_CHECK_HEADERS([RTIMULib.h], [], [have_RTIMUL_h=no])
-#if test "x$have_RTIMUL_h" = xno; then
-#    AC_MSG_ERROR([
-#        -----------------------------------------------
-#         Unable to find RTIMULib on this system.
-#
-#         Check with your distribution on how to install
-#         this.
-#
-#         Source Code can be found here:
-#         https://github.com/RPi-Distro/RTIMULib
-#         -----------------------------------------------
-#        ])
-#  else
-#    LIBS+='-lRTIMULib '
-#  fi
-#
-#AC_CHECK_HEADERS([SenseHat.h], [], [have_SenseHat_h=no])
-#if test "x$have_SenseHat_h" = xno; then
-#    AC_MSG_ERROR([
-#        -----------------------------------------------
-#         Unable to find SenseHat on this system.
-#
-#         Check with your distribution on how to install
-#         this.
-#
-#         Source Code can be found here:
-#         https://github.com/PhilippeSimier/SenseHat
-#         -----------------------------------------------
-#        ])
-#    else
-#      LIBS+='-lSenseHat '
-#    fi
-#
-#AC_CHECK_HEADERS([sys/epoll.h], [], [have_epoll=no])
-#if test "x${have_epoll}" = xno; then
-#  AC_MSG_ERROR([
-#      -----------------------------------------------
-#       Unable to find epoll on this system.
-#       epoll is Linux exclusive, FreeBSD uses kqueue.
-#
-#       If you'd like to port to FreeBSD then please
-#       submit a pull request.
-#      -----------------------------------------------
-#      ])
-#fi
-#
-#AC_CHECK_HEADERS([rapidjson/document.h], [], [have_rapidjson=no])
-#if test "x${have_rapidjson}" = xno; then
-#  AC_MSG_ERROR([
-#      -----------------------------------------------
-#       Unable to find rapidjson dev on this system.
-#       Check with your distribution on how to install
-#       rapidjson.
-#
-#       Source code for rapidjson can be found at:
-#           https://github.com/Tencent/rapidjson
-#      -----------------------------------------------
-#      ])
-#fi
+AC_CHECK_HEADERS([sqlite3.h],
+  [], [have_SQLITE3_h=no]
+)
+if test "x$have_SQLITE3_h" = xno; then
+    AC_MSG_ERROR([
+        -----------------------------------------------
+         Unable to find sqlite3 dev on this system.
+
+         Check with your distribution on how to install
+         this.
+
+         Source Code can be found here:
+         https://sqlite.org/download.html
+         -----------------------------------------------
+        ])
+else
+  LIBS+='-lsqlite3 '
+fi
+
+#TODO: --with-preload-lib AC_ARG_ENABLE 
+#Then we can do all of this if the user wants to build thedirectory
+PKG_CHECK_MODULES([LIBCONFIG], [libconfig])
 
 #Enable arguments
-#AC_ARG_WITH([kernel-headers], 
-#            [AS_HELP_STRING([--with-kernel-headers=@<:@DIR@:>@], 
-#            [specify the location of kernel headers])],
-#            [kernel_headers_location=${withval}],
-#            [kernel_headers_location=no])
-#
-#AC_MSG_NOTICE([Header location ${kernel_headers_location}])
-#if test "x$kernel_headers_location}" != xno; then
-#  CPPFLAGS+="${kernel_headers_location}"
-#fi
-#
-## Checks for specific function declarations
-#AC_CHECK_FUNCS([sched_setaffinity], [], [have_setaffinity=no])
-#if test "x${have_setaffinity}" = xno; then
-#  AC_MSG_ERROR([
-#      -----------------------------------------------
-#       Unable to find sched_setaffinity(2) on this 
-#       system.
-#
-#       This probably means you aren't running Linux 
-#       or have kernel headers installed. Check with
-#       your OS's documentation for more information.
-#
-#       On FreeBSD, this might be done with 
-#       cpuset(2). If you'd like to port to FreeBSD,
-#       then please submit a pull request.
-#       -----------------------------------------------
-#      ])
-#fi
+AC_ARG_WITH([config-file-path], 
+	    [AS_HELP_STRING([--with-config-file-path=@<:@DIR@:>@], 
+            [specify the location of the safe hosts])],
+            [config_file_location=${withval}],
+            [config_file_location="/etc/safe_hosts.conf"])
 
+if test "x${config_file_location}" != "x/etc/safe_hosts.conf"; then
+  AC_MSG_RESULT([using config file path ${config_file_location}])
+else
+  AC_MSG_RESULT([using default config file path ${config_file_location}])
+fi
+AC_DEFINE_UNQUOTED([SAFE_HOSTS_PATH], ["${config_file_location}"], [The path to safe-hosts.conf])
 # Checks for typedefs, structures, and compiler characteristics.
 
 
 # Checks for library functions.
-PKG_CHECK_MODULES([GTEST], [gtest_main])
 
-#PKG_CHECK_MODULES([APR], [apr-1])
-#PKG_CHECK_MODULES([APR_UTIL], [apr-util-1])
-
-                
 #AC_SEARCH_LIBS([pthread_setaffinity_np], [pthread],
 #               [have_pthread_setaffinity=yes])
 #
@@ -191,7 +130,6 @@ PKG_CHECK_MODULES([GTEST], [gtest_main])
 #      ])
 #fi
 
-AC_SEARCH_LIBS([sqlite3_open], [sqlite3])
 #AX_CXX_CHECK_LIB(SenseHat, [SenseHat],
 #               [have_SenseHat=yes], [have_SenseHat=no])
 #
@@ -218,7 +156,7 @@ ${PACKAGE_NAME} Version ${PACKAGE_VERSION}
 
 Prefix: '${prefix}'.
 Compiler: '${CXX} ${CXXFLAGS} ${CPPFLAGS}'
-Libraries: '${LIBS} ${GTEST_LIBS} ${APR_LIBS} ${APR_UTIL_LIBS}'
+Libraries: '${LIBS} ${LIBCONFIG_LIBS} ${APR_LIBS} ${APR_UTIL_LIBS}'
 
 Package features:
 
